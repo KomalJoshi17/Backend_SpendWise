@@ -29,7 +29,6 @@ connectDB();
 // MIDDLEWARE
 app.use(cors({
   origin: [
-    "http://localhost:5173",
     "https://spendwise-chi.vercel.app"
   ],
   credentials: true
