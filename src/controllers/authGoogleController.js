@@ -3,26 +3,28 @@ const generateToken = require('../utils/generateToken');
 
 const googleCallback = async (req, res, next) => {
   try {
-    const { id, email, name, picture } = req.user; // From passport strategy
+    const { id, email, name, picture } = req.user;
 
     if (!id || !email) {
-      return res.status(400).json({ message: 'Google authentication failed: missing user data' });
+      return res.status(400).json({
+        message: 'Google authentication failed: missing user data'
+      });
     }
 
     let user = await User.findOne({ googleId: id });
 
     if (user) {
-      if (name && user.name !== name) user.name = name;
-      if (picture && user.avatar !== picture) user.avatar = picture;
+      if (name) user.name = name;
+      if (picture) user.avatar = picture;
       await user.save();
     } else {
       user = await User.findOne({ email: email.toLowerCase() });
 
       if (user) {
         user.googleId = id;
-        user.provider = user.password ? 'local' : 'google'; 
-        if (picture) user.avatar = picture;
+        user.provider = user.password ? 'local' : 'google';
         if (name) user.name = name;
+        if (picture) user.avatar = picture;
         await user.save();
       } else {
         user = await User.create({
@@ -34,17 +36,33 @@ const googleCallback = async (req, res, next) => {
         });
       }
     }
+
+    // Generate JWT token
     const token = generateToken({ id: user._id });
 
+    // Set token cookie
     const isProduction = process.env.NODE_ENV === 'production';
     res.cookie('token', token, {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    // FRONTEND URL Handling
+    let frontendUrl = process.env.FRONTEND_URL;
+
+    // Debug logging — VERY important on Render
+    console.log("➡ FRONTEND_URL from .env =", frontendUrl);
+
+    if (!frontendUrl) {
+      console.warn("⚠ FRONTEND_URL NOT FOUND — using localhost fallback");
+      frontendUrl = "http://localhost:5173";
+    }
+
+    // Remove trailing slash to avoid "//?token="
+    frontendUrl = frontendUrl.replace(/\/$/, "");
+
     const userData = {
       id: user._id,
       name: user.name,
@@ -54,10 +72,15 @@ const googleCallback = async (req, res, next) => {
       monthlyIncome: user.monthlyIncome,
       savingsGoal: user.savingsGoal,
     };
+
     const redirectUrl = `${frontendUrl}/?token=${token}&googleAuth=true&user=${encodeURIComponent(JSON.stringify(userData))}`;
+
+    console.log("➡ Redirecting to:", redirectUrl);
+
     res.redirect(redirectUrl);
+
   } catch (error) {
-    console.error('Google OAuth callback error:', error);
+    console.error("Google OAuth callback error:", error);
     next(error);
   }
 };
@@ -79,4 +102,3 @@ module.exports = {
   googleFailure,
   logout,
 };
-

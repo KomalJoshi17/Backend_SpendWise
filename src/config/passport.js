@@ -1,8 +1,12 @@
 const passport = require('passport');
 const { Strategy: GoogleStrategy } = require('passport-google-oauth20');
 
+// Environment variables
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const CALLBACK_URL =
+  process.env.GOOGLE_CALLBACK_URL ||
+  "http://localhost:5000/api/auth/google/callback";
 
 if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
   passport.use(
@@ -10,40 +14,41 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
       {
         clientID: GOOGLE_CLIENT_ID,
         clientSecret: GOOGLE_CLIENT_SECRET,
-        callbackURL: process.env.GOOGLE_CALLBACK_URL || '/api/auth/google/callback',
+        callbackURL: CALLBACK_URL,
+        passReqToCallback: false,
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
-          // Extract user info from Google profile
           const { id, displayName, emails, photos } = profile;
-          const email = emails && emails[0] ? emails[0].value : null;
-          const picture = photos && photos[0] ? photos[0].value : null;
+
+          const email = emails?.[0]?.value || null;
+          const picture = photos?.[0]?.value || null;
 
           if (!email) {
-            return done(new Error('Email not provided by Google'), null);
+            return done(new Error("Google did not return an email"), null);
           }
 
-          // Pass user data to callback
+          // Return clean user object to callback controller
           return done(null, {
             id,
-            email,
+            email: email.toLowerCase(),
             name: displayName,
             picture,
           });
         } catch (error) {
+          console.error("Google OAuth Error:", error);
           return done(error, null);
         }
       }
     )
   );
-  console.log('✅ Google OAuth strategy configured');
+
+  console.log("✅ Google OAuth strategy configured with callback:", CALLBACK_URL);
 } else {
-  console.warn('⚠️  Google OAuth credentials not found. Google sign-in will be disabled.');
-  console.warn('   Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env to enable Google OAuth');
+  console.warn("⚠️ Google OAuth disabled — missing CLIENT ID or SECRET");
 }
 
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
 
 module.exports = passport;
-
