@@ -1,4 +1,3 @@
-
 const dotenv = require('dotenv');
 dotenv.config();
 
@@ -8,33 +7,44 @@ const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const passport = require('./config/passport');
+
+// ROUTES
 const authRoutes = require('./routes/authRoutes');
 const authGoogleRoutes = require('./routes/authGoogleRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
 const insightRoutes = require('./routes/insightRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const aiRoutes = require('./routes/aiRoutes');
-const errorHandler = require('./middleware/errorHandler');
+const healthRoutes = require('./routes/healthRoutes'); // ✅ FIXED PATH
 
-connectDB();
-
+// INITIALIZE APP (should be BEFORE app.use)
 const app = express();
 
+// CONNECT DATABASE
+connectDB();
+
+// MIDDLEWARE
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true, // Allow cookies
+  credentials: true,
 }));
+
 app.use(express.json());
-app.use(cookieParser()); // Parse cookies
+app.use(cookieParser());
 app.use(morgan('dev'));
 
 // Initialize Passport
 app.use(passport.initialize());
 
+// HEALTH CHECK ROUTE
+app.use("/api/health", healthRoutes); // ✅ NOW CORRECT PLACE
+
+// ROOT ROUTE
 app.get('/', (req, res) => {
   res.json({ message: 'SpendWise API is running' });
 });
 
+// API ROUTES
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', authGoogleRoutes);
 app.use('/api/transactions', transactionRoutes);
@@ -42,10 +52,11 @@ app.use('/api/insights', insightRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/ai', aiRoutes);
 
+// ERROR HANDLER
 app.use(errorHandler);
 
+// START SERVER
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
