@@ -15,12 +15,15 @@ const transactionRoutes = require('./routes/transactionRoutes');
 const insightRoutes = require('./routes/insightRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const aiRoutes = require('./routes/aiRoutes');
-const healthRoutes = require('./routes/healthRoutes'); // ✅ FIXED PATH
+const healthRoutes = require('./routes/healthRoutes');
 
-// INITIALIZE APP (should be BEFORE app.use)
+// ERROR HANDLER (YOU HAVE THIS FILE — IMPORT IT)
+const errorHandler = require('./middleware/errorHandler');
+
+// INIT APP FIRST (you previously used app before this line)
 const app = express();
 
-// CONNECT DATABASE
+// CONNECT TO DATABASE
 connectDB();
 
 // MIDDLEWARE
@@ -32,12 +35,10 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan('dev'));
-
-// Initialize Passport
 app.use(passport.initialize());
 
 // HEALTH CHECK ROUTE
-app.use("/api/health", healthRoutes); // ✅ NOW CORRECT PLACE
+app.use("/api/health", healthRoutes);
 
 // ROOT ROUTE
 app.get('/', (req, res) => {
@@ -52,10 +53,9 @@ app.use('/api/insights', insightRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/ai', aiRoutes);
 
-// ERROR HANDLER
+// ERROR HANDLER (MUST BE AFTER ROUTES)
 app.use(errorHandler);
 
-// START SERVER
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
