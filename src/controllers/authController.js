@@ -10,6 +10,14 @@ const signup = async (req, res, next) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
+    // Check if RECAPTCHA_SECRET is configured
+    if (!process.env.RECAPTCHA_SECRET) {
+      console.error("❌ RECAPTCHA_SECRET is not set in environment variables");
+      return res.status(500).json({
+        message: "Server configuration error: reCAPTCHA secret key not configured"
+      });
+    }
+
     const params = new URLSearchParams();
     params.append("secret", process.env.RECAPTCHA_SECRET);
     params.append("response", captchaToken);
@@ -23,9 +31,12 @@ const signup = async (req, res, next) => {
     console.log("DEBUG captchaRes.data =", captchaRes.data);
 
     if (!captchaRes.data.success) {
+      const errorCodes = captchaRes.data["error-codes"] || [];
+      console.error("reCAPTCHA validation failed:", errorCodes);
+      
       return res.status(400).json({
         message: "Captcha validation failed",
-        detail: captchaRes.data
+        detail: captchaRes.data["error-codes"]?.join(", ") || "Unknown error"
       });
     }
 
