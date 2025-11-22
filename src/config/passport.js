@@ -1,12 +1,16 @@
-const passport = require('passport');
-const { Strategy: GoogleStrategy } = require('passport-google-oauth20');
+const passport = require("passport");
+const { Strategy: GoogleStrategy } = require("passport-google-oauth20");
 
-// Environment variables
+// Load environment variables
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const CALLBACK_URL =
-  process.env.GOOGLE_CALLBACK_URL ||
-  "http://localhost:5000/api/auth/google/callback";
+
+// Fix callback URL issue permanently
+let CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL;
+
+if (!CALLBACK_URL) {
+  CALLBACK_URL = "https://backend-spendwise.onrender.com/api/auth/google/callback";
+}
 
 if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
   passport.use(
@@ -28,7 +32,6 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
             return done(new Error("Google did not return an email"), null);
           }
 
-          // Return clean user object to callback controller
           return done(null, {
             id,
             email: email.toLowerCase(),

@@ -27,10 +27,30 @@ const app = express();
 connectDB();
 
 // MIDDLEWARE
+// CORS configuration - use environment variable or allow common origins
+const allowedOrigins = process.env.FRONTEND_URL 
+  ? [process.env.FRONTEND_URL]
+  : process.env.NODE_ENV === 'production'
+  ? [] // In production, FRONTEND_URL must be set
+  : ['http://localhost:5173', 'http://localhost:3000']; // Dev fallback
+
 app.use(cors({
-  origin: [
-    "https://spendwise-chi.vercel.app"
-  ],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.length === 0) {
+      console.error('❌ FRONTEND_URL not set in production - CORS will reject all requests');
+      return callback(new Error('CORS: FRONTEND_URL environment variable is required'));
+    }
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠ CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 

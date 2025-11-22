@@ -56,7 +56,16 @@ const googleCallback = async (req, res, next) => {
     console.log("➡ FRONTEND_URL from .env =", frontendUrl);
 
     if (!frontendUrl) {
-      console.warn("⚠ FRONTEND_URL NOT FOUND — using localhost fallback");
+      // In production, throw error instead of using localhost
+      if (process.env.NODE_ENV === 'production') {
+        console.error("❌ FRONTEND_URL is required in production environment");
+        return res.status(500).json({
+          message: 'Server configuration error: FRONTEND_URL not set',
+          error: 'Please configure FRONTEND_URL environment variable'
+        });
+      }
+      // Only use localhost fallback in development
+      console.warn("⚠ FRONTEND_URL NOT FOUND — using localhost fallback (dev only)");
       frontendUrl = "http://localhost:5173";
     }
 
